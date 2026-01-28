@@ -1,5 +1,9 @@
 # clean base image containing only comfyui, comfy-cli and comfyui-manager
-FROM runpod/worker-comfyui:5.5.1-base
+FROM runpod/worker-comfyui:latest
+
+# update ComfyUI to get newest nodes (e.g., Flux2Scheduler)
+RUN git -C /comfyui pull
+RUN pip install -r /comfyui/requirements.txt
 
 # install custom nodes into comfyui (first node with --mode remote to fetch updated cache)
 # No registry-verified custom nodes found.
