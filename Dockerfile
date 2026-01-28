@@ -16,7 +16,11 @@ RUN mkdir -p /comfyui/models/diffusion_models /comfyui/models/clip /comfyui/mode
 
 # 3. Download Model with Token (Gated)
 RUN test -n "${HF_TOKEN}"
-RUN curl -H "Authorization: Bearer ${HF_TOKEN}" -L https://huggingface.co/black-forest-labs/FLUX.2-klein-base-9b-fp8/resolve/main/flux-2-klein-base-9b-fp8.safetensors -o /comfyui/models/diffusion_models/flux-2-klein-9b-fp8.safetensors
+RUN curl -fL -H "Authorization: Bearer ${HF_TOKEN}" \
+    https://huggingface.co/black-forest-labs/FLUX.2-klein-base-9b-fp8/resolve/main/flux-2-klein-base-9b-fp8.safetensors \
+    -o /comfyui/models/diffusion_models/flux-2-klein-9b-fp8.safetensors && \
+    test -s /comfyui/models/diffusion_models/flux-2-klein-9b-fp8.safetensors && \
+    [ $(stat -c%s "/comfyui/models/diffusion_models/flux-2-klein-9b-fp8.safetensors") -gt 1000000000 ]
 
 RUN comfy model download --url https://huggingface.co/Comfy-Org/flux2-klein-9B/resolve/main/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors --relative-path models/clip --filename qwen_3_8b_fp8mixed.safetensors
 
@@ -28,5 +32,8 @@ RUN comfy model download --url https://huggingface.co/stealthagentsimon14/flux2k
 # Remove the empty unet folder first if it exists, then create symlink
 RUN rm -rf /comfyui/models/unet && \
     ln -s /comfyui/models/diffusion_models /comfyui/models/unet
+RUN test -L /comfyui/models/unet && \
+    [ "$(readlink /comfyui/models/unet)" = "/comfyui/models/diffusion_models" ] && \
+    test -f /comfyui/models/unet/flux-2-klein-9b-fp8.safetensors
 
 ENV COMFYUI_PATH=/comfyui
