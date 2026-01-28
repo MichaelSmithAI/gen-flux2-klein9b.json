@@ -1,0 +1,40 @@
+{
+  "input": {
+    "workflow": {
+      "76": {
+        "inputs": {
+          "filename": "Nude young white american woman straddling the hood of a blue Nissan Skyline GT-R R34 in neon-lit Tokyo streets at night. Shot on Kodak 2383 film with warm highlights, subtle grain, and vibrant colors. Wet pavement reflections, fog, dynamic low angle. Seductive, cyberpunk vibe."
+        },
+        "class_type": "PrimitiveStringMultiline",
+        "_meta": {
+          "title": "Prompt"
+        }
+      },
+      "77": {
+        "inputs": {
+          "text": [
+            "76",
+            0
+          ]
+        },
+        "class_type": "a67caa28-5f85-4917-8396-36004960dd30",
+        "_meta": {
+          "title": "a67caa28-5f85-4917-8396-36004960dd30"
+        }
+      },
+      "78": {
+        "inputs": {
+          "filename_prefix": "Flux2-Klein",
+          "images": [
+            "77",
+            0
+          ]
+        },
+        "class_type": "SaveImage",
+        "_meta": {
+          "title": "SaveImage"
+        }
+      }
+    }
+  }
+}
