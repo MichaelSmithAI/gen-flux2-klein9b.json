@@ -5,11 +5,8 @@ ARG HF_TOKEN
 
 USER root
 
-# 1. Update ComfyUI
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
-RUN cd /comfyui && \
-    git pull origin master && \
-    pip install --no-cache-dir -r requirements.txt
+# 1. Update ComfyUI (safe CLI update)
+RUN comfy --skip-prompt update all
 
 # Ensure directories exist
 RUN mkdir -p /comfyui/models/diffusion_models /comfyui/models/clip /comfyui/models/vae /comfyui/models/loras
@@ -22,6 +19,35 @@ RUN comfy model download --url https://huggingface.co/stealthagentsimon14/flux2k
 
 RUN rm -rf /comfyui/models/unet && \
     ln -s /comfyui/models/diffusion_models /comfyui/models/unet
+
+# Build-time validation (no GPU)
+RUN comfy --version && comfy --workspace /comfyui list
+RUN test -s /comfyui/models/clip/qwen_3_8b_fp8mixed.safetensors && \
+    [ $(stat -c%s "/comfyui/models/clip/qwen_3_8b_fp8mixed.safetensors") -gt 1000000 ] && \
+    test -s /comfyui/models/vae/flux2-vae.safetensors && \
+    [ $(stat -c%s "/comfyui/models/vae/flux2-vae.safetensors") -gt 1000000 ] && \
+    test -s /comfyui/models/loras/NSFW-klein.safetensors && \
+    [ $(stat -c%s "/comfyui/models/loras/NSFW-klein.safetensors") -gt 1000000 ]
+RUN python - <<'PY'
+import sys
+sys.path.append("/comfyui")
+import nodes
+if "Flux2Scheduler" not in nodes.NODE_CLASS_MAPPINGS:
+    raise SystemExit("Flux2Scheduler node not found in registry")
+PY
+COPY input-req.json /tmp/input-req.json
+COPY Flux2-Klein_00542_.json /tmp/Flux2-Klein_00542_.json
+RUN python - <<'PY'
+import json
+with open("/tmp/input-req.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+if not isinstance(data, dict) or "input" not in data or "workflow" not in data["input"]:
+    raise SystemExit("input-req.json missing input.workflow")
+with open("/tmp/Flux2-Klein_00542_.json", "r", encoding="utf-8") as f:
+    wf = json.load(f)
+if "nodes" not in wf or not isinstance(wf["nodes"], list):
+    raise SystemExit("Flux2-Klein_00542_.json missing nodes list")
+PY
 
 # Download gated model at runtime using HF_TOKEN and verify symlink
 RUN printf '%s\n' \
@@ -56,4 +82,5 @@ RUN printf '%s\n' \
   > /start-with-models.sh && chmod +x /start-with-models.sh
 
 ENV COMFYUI_PATH=/comfyui
+WORKDIR /
 CMD ["/start-with-models.sh"]
