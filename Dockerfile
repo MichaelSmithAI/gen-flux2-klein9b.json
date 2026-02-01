@@ -6,6 +6,9 @@ USER root
 
 ENV COMFYUI_PATH=/comfyui
 
+# Ensure curl exists for runtime downloads.
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 # Lightweight startup downloader to avoid long image builds.
 RUN printf '%s\n' \
   '#!/usr/bin/env bash' \
