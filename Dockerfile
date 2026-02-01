@@ -24,7 +24,7 @@ RUN printf '%s\n' \
   '    log "Found $(basename "$path")"' \
   '    return 0' \
   '  fi' \
-  '  log "Downloading $(basename "$path")"' \
+  '  log "Downloading $(basename "$path") from $url"' \
   '  mkdir -p "$(dirname "$path")"' \
   '  local extra_headers=()' \
   '  if [ -n "$auth_header" ]; then' \
@@ -33,11 +33,23 @@ RUN printf '%s\n' \
   '    extra_headers+=(-H "Authorization: Bearer ${HF_TOKEN}")' \
   '  fi' \
   '  extra_headers+=(-H "User-Agent: runpod-comfyui/1.0")' \
-  '  curl -fL --retry 3 --retry-delay 5 --retry-connrefused "${extra_headers[@]}" "$url" -o "$path"' \
+  '  local tmp_path="${path}.tmp"' \
+  '  local http_code' \
+  '  http_code="$(curl -sS -L --retry 3 --retry-delay 5 --retry-connrefused -w "%{http_code}" "${extra_headers[@]}" "$url" -o "$tmp_path" || true)"' \
+  '  if [ "$http_code" != "200" ]; then' \
+  '    rm -f "$tmp_path"' \
+  '    log "Download failed ($http_code) for $(basename "$path")"' \
+  '    if [ "$http_code" = "403" ]; then' \
+  '      log "403 usually means missing access/terms or invalid token for the repo."' \
+  '    fi' \
+  '    exit 22' \
+  '  fi' \
+  '  mv "$tmp_path" "$path"' \
   '  test -s "$path"' \
   '  [ "$(stat -c%s "$path")" -gt "$min_bytes" ]' \
   '}' \
   '' \
+  'HF_TOKEN="${HF_TOKEN:-${HUGGING_FACE_HUB_TOKEN:-}}"' \
   'VOLUME_PATH="${RUNPOD_VOLUME_PATH:-/runpod-volume}"' \
   'MODEL_ROOT="/comfyui/models"' \
   'if [ -d "$VOLUME_PATH" ] && [ -w "$VOLUME_PATH" ]; then' \
