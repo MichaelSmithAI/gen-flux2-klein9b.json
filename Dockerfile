@@ -26,11 +26,14 @@ RUN printf '%s\n' \
   '  fi' \
   '  log "Downloading $(basename "$path")"' \
   '  mkdir -p "$(dirname "$path")"' \
+  '  local extra_headers=()' \
   '  if [ -n "$auth_header" ]; then' \
-  '    curl -fL --retry 3 --retry-delay 5 --retry-connrefused -H "$auth_header" "$url" -o "$path"' \
-  '  else' \
-  '    curl -fL --retry 3 --retry-delay 5 --retry-connrefused "$url" -o "$path"' \
+  '    extra_headers+=(-H "$auth_header")' \
+  '  elif [ -n "${HF_TOKEN:-}" ] && [[ "$url" == *huggingface.co/* ]]; then' \
+  '    extra_headers+=(-H "Authorization: Bearer ${HF_TOKEN}")' \
   '  fi' \
+  '  extra_headers+=(-H "User-Agent: runpod-comfyui/1.0")' \
+  '  curl -fL --retry 3 --retry-delay 5 --retry-connrefused "${extra_headers[@]}" "$url" -o "$path"' \
   '  test -s "$path"' \
   '  [ "$(stat -c%s "$path")" -gt "$min_bytes" ]' \
   '}' \
