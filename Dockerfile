@@ -5,6 +5,7 @@ ARG HF_TOKEN
 USER root
 
 ENV COMFYUI_PATH=/comfyui
+ENV COMFY_AUTO_UPDATE=1
 
 # Ensure curl exists for runtime downloads.
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
@@ -49,8 +50,50 @@ RUN printf '%s\n' \
   '  [ "$(stat -c%s "$path")" -gt "$min_bytes" ]' \
   '}' \
   '' \
+  'set_manager_network_mode() {' \
+  '  local mode="$1"' \
+  '  local config_paths=("/comfyui/user/__manager/config.ini" "/comfyui/user/default/ComfyUI-Manager/config.ini")' \
+  '  local path' \
+  '  for path in "${config_paths[@]}"; do' \
+  '    if [ -f "$path" ]; then' \
+  '      if grep -q "^network_mode" "$path"; then' \
+  '        sed -i "s/^network_mode.*/network_mode = $mode/" "$path"' \
+  '      else' \
+  '        printf "\nnetwork_mode = %s\n" "$mode" >> "$path"' \
+  '      fi' \
+  '    fi' \
+  '  done' \
+  '}' \
+  '' \
   'HF_TOKEN="${HF_TOKEN:-${HUGGING_FACE_HUB_TOKEN:-}}"' \
   'VOLUME_PATH="${RUNPOD_VOLUME_PATH:-/runpod-volume}"' \
+  '' \
+  'if [ "${COMFY_AUTO_UPDATE:-0}" = "1" ]; then' \
+  '  log "Updating ComfyUI core + frontend (COMFY_AUTO_UPDATE=1)"' \
+  '  set_manager_network_mode online' \
+  '  if [ -d /comfyui/.git ]; then' \
+  '    if [ "$(git -C /comfyui rev-parse --abbrev-ref HEAD)" = "HEAD" ]; then' \
+  '      if git -C /comfyui show-ref --verify --quiet refs/remotes/origin/master; then' \
+  '        git -C /comfyui checkout -B master origin/master' \
+  '      elif git -C /comfyui show-ref --verify --quiet refs/remotes/origin/main; then' \
+  '        git -C /comfyui checkout -B main origin/main' \
+  '      fi' \
+  '    fi' \
+  '    if ! git -C /comfyui pull --rebase --autostash; then' \
+  '      log "ComfyUI core update failed; continuing startup."' \
+  '    fi' \
+  '  else' \
+  '    log "ComfyUI git repo not found; skipping core update."' \
+  '  fi' \
+  '  if ! comfy --skip-prompt update all; then' \
+  '    log "ComfyUI-Manager update failed; continuing startup."' \
+  '  fi' \
+  '  if ! /opt/venv/bin/python -m pip install -r /comfyui/requirements.txt; then' \
+  '    log "requirements.txt update failed; continuing startup."' \
+  '  fi' \
+  '  set_manager_network_mode offline' \
+  'fi' \
+  '' \
   'MODEL_ROOT="/comfyui/models"' \
   'if [ -d "$VOLUME_PATH" ] && [ -w "$VOLUME_PATH" ]; then' \
   '  MODEL_ROOT="$VOLUME_PATH/models"' \
@@ -67,10 +110,6 @@ RUN printf '%s\n' \
   '  ln -s /comfyui/models/diffusion_models /comfyui/models/unet' \
   'fi' \
   '' \
-  'if [ "${COMFY_AUTO_UPDATE:-0}" = "1" ]; then' \
-  '  log "Updating ComfyUI (COMFY_AUTO_UPDATE=1)"' \
-  '  comfy --skip-prompt update all' \
-  'fi' \
   '' \
   'download_if_missing "https://huggingface.co/Comfy-Org/flux2-klein-9B/resolve/main/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors" "/comfyui/models/text_encoders/qwen_3_8b_fp8mixed.safetensors" 1000000 ""' \
   'download_if_missing "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/vae/flux2-vae.safetensors" "/comfyui/models/vae/flux2-vae.safetensors" 1000000 ""' \
@@ -101,6 +140,7 @@ RUN printf '%s\n' \
   > /start-with-models.sh && chmod +x /start-with-models.sh
 
 WORKDIR /
+COPY input-req.json /test_input.json
 CMD ["/start-with-models.sh"]
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

@@ -21,6 +21,20 @@ docker run -p 8188:8188 -e HF_TOKEN=your_hf_token gen-flux2-klein9b.json
 
 See `example-request.json` for a ready-to-use API request payload.
 
+## Build a request with image inputs
+
+To test `Flux2-Klein_00248_.json` with reference images, generate `input-req.json`:
+
+```bash
+python scripts/build_test_request.py \
+  --workflow Flux2-Klein_00248_.json \
+  --prompt "Your prompt here" \
+  --image1 "path/to/reference1.png" \
+  --image2 "path/to/reference2.png"
+```
+
+Then rebuild the image so `/test_input.json` uses the new request.
+
 ## Runtime downloads and caching
 
 This image downloads models at container startup to avoid long build times. For
