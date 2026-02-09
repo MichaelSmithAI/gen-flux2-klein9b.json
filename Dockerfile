@@ -6,6 +6,9 @@ USER root
 
 ENV COMFYUI_PATH=/comfyui
 ENV COMFY_AUTO_UPDATE=1
+ENV COMFYUI_ARGS="--highvram"
+ENV COMFYUI_CMDLINE_ARGS="--highvram"
+ENV COMMANDLINE_ARGS="--highvram"
 
 # Ensure curl exists for runtime downloads.
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
@@ -136,6 +139,9 @@ RUN printf '%s\n' \
   '  exit 1' \
   'fi' \
   '' \
+  'export COMFYUI_ARGS="--highvram ${COMFYUI_ARGS:-}"' \
+  'export COMFYUI_CMDLINE_ARGS="--highvram ${COMFYUI_CMDLINE_ARGS:-}"' \
+  'export COMMANDLINE_ARGS="--highvram ${COMMANDLINE_ARGS:-}"' \
   'exec /start.sh' \
   > /start-with-models.sh && chmod +x /start-with-models.sh
 
