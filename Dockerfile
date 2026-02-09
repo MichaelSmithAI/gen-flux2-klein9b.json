@@ -13,6 +13,11 @@ ENV COMMANDLINE_ARGS="--highvram"
 # Ensure curl exists for runtime downloads.
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
+# Force high VRAM mode even if base start script sets low/med VRAM.
+RUN if [ -f /start.sh ]; then \
+      sed -i 's/--lowvram/--highvram/g; s/--medvram/--highvram/g' /start.sh; \
+    fi
+
 # Lightweight startup downloader to avoid long image builds.
 RUN printf '%s\n' \
   '#!/usr/bin/env bash' \
