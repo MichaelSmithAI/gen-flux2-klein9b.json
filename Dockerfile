@@ -13,10 +13,26 @@ ENV COMMANDLINE_ARGS="--highvram"
 # Ensure curl exists for runtime downloads.
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
-# Force high VRAM mode even if base start script sets low/med VRAM.
-RUN if [ -f /start.sh ]; then \
-      sed -i 's/--lowvram/--highvram/g; s/--medvram/--highvram/g' /start.sh; \
-    fi
+# Replace base start script to force high VRAM mode.
+RUN if [ -f /start.sh ]; then mv /start.sh /start.sh.base; fi && \
+    printf '%s\n' \
+      '#!/usr/bin/env bash' \
+      'set -euo pipefail' \
+      '' \
+      'COMFYUI_ARGS="${COMFYUI_ARGS:-}"' \
+      'COMFYUI_CMDLINE_ARGS="${COMFYUI_CMDLINE_ARGS:-}"' \
+      'COMMANDLINE_ARGS="${COMMANDLINE_ARGS:-}"' \
+      '' \
+      '# Force high VRAM mode to avoid paging on each run.' \
+      'COMFYUI_ARGS="--highvram ${COMFYUI_ARGS}"' \
+      'COMFYUI_CMDLINE_ARGS="--highvram ${COMFYUI_CMDLINE_ARGS}"' \
+      'COMMANDLINE_ARGS="--highvram ${COMMANDLINE_ARGS}"' \
+      '' \
+      'export COMFYUI_ARGS COMFYUI_CMDLINE_ARGS COMMANDLINE_ARGS' \
+      '' \
+      '/opt/venv/bin/python /comfyui/main.py --listen 0.0.0.0 --port 8188 ${COMFYUI_ARGS} &' \
+      'exec /opt/venv/bin/python /handler.py' \
+      > /start.sh && chmod +x /start.sh
 
 # Lightweight startup downloader to avoid long image builds.
 RUN printf '%s\n' \
