@@ -6,14 +6,14 @@ USER root
 
 ENV COMFYUI_PATH=/comfyui
 ENV COMFY_AUTO_UPDATE=1
-ENV COMFYUI_ARGS="--highvram"
-ENV COMFYUI_CMDLINE_ARGS="--highvram"
-ENV COMMANDLINE_ARGS="--highvram"
+ENV COMFYUI_ARGS="--normalvram"
+ENV COMFYUI_CMDLINE_ARGS="--normalvram"
+ENV COMMANDLINE_ARGS="--normalvram"
 
 # Ensure curl exists for runtime downloads.
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
-# Replace base start script to force high VRAM mode.
+# Replace base start script to force normal VRAM mode.
 RUN if [ -f /start.sh ]; then mv /start.sh /start.sh.base; fi && \
     printf '%s\n' \
       '#!/usr/bin/env bash' \
@@ -23,10 +23,10 @@ RUN if [ -f /start.sh ]; then mv /start.sh /start.sh.base; fi && \
       'COMFYUI_CMDLINE_ARGS="${COMFYUI_CMDLINE_ARGS:-}"' \
       'COMMANDLINE_ARGS="${COMMANDLINE_ARGS:-}"' \
       '' \
-      '# Force high VRAM mode to avoid paging on each run.' \
-      'COMFYUI_ARGS="--highvram ${COMFYUI_ARGS}"' \
-      'COMFYUI_CMDLINE_ARGS="--highvram ${COMFYUI_CMDLINE_ARGS}"' \
-      'COMMANDLINE_ARGS="--highvram ${COMMANDLINE_ARGS}"' \
+      '# Force normal VRAM mode to reduce OOMs.' \
+      'COMFYUI_ARGS="--normalvram ${COMFYUI_ARGS}"' \
+      'COMFYUI_CMDLINE_ARGS="--normalvram ${COMFYUI_CMDLINE_ARGS}"' \
+      'COMMANDLINE_ARGS="--normalvram ${COMMANDLINE_ARGS}"' \
       '' \
       'export COMFYUI_ARGS COMFYUI_CMDLINE_ARGS COMMANDLINE_ARGS' \
       '' \
@@ -160,9 +160,9 @@ RUN printf '%s\n' \
   '  exit 1' \
   'fi' \
   '' \
-  'export COMFYUI_ARGS="--highvram ${COMFYUI_ARGS:-}"' \
-  'export COMFYUI_CMDLINE_ARGS="--highvram ${COMFYUI_CMDLINE_ARGS:-}"' \
-  'export COMMANDLINE_ARGS="--highvram ${COMMANDLINE_ARGS:-}"' \
+  'export COMFYUI_ARGS="--normalvram ${COMFYUI_ARGS:-}"' \
+  'export COMFYUI_CMDLINE_ARGS="--normalvram ${COMFYUI_CMDLINE_ARGS:-}"' \
+  'export COMMANDLINE_ARGS="--normalvram ${COMMANDLINE_ARGS:-}"' \
   'exec /start.sh' \
   > /start-with-models.sh && chmod +x /start-with-models.sh
 
